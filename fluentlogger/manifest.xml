@@ -1,10 +1,9 @@
 <package uuid="fluentloggerservice" version="0.1.0">
     <services>
         <service name="fluentloggerservice" autorun="true"
-            execStart="./env bash ./python bin/fluentlogger.py" />
+            execStart="/bin/bash ./python bin/fluentlogger.py" />
         <executableFiles>
             <file path="python" />
-            <file path="env" />
         </executableFiles>
     </services>
     <requirements>
