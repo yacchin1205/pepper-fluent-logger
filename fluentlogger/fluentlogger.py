@@ -6,6 +6,8 @@ import threading
 from fluent import sender
 from fluent import event
 from linux_metrics import cpu_stat
+from linux_metrics import cpu_stat
+from linux_metrics import net_stat
 
 PREF_DOMAIN = 'com.github.yacchin1205.fluentlogger'
 
@@ -16,6 +18,7 @@ class FluentLoggerService:
         self.running = False
         self.logListener = None
         self.handlerId = None
+        self.metricsInterval = int(10 * 1000 * 1000)
         self.logLevel = {'Fatal': 1, 'Error': 2, 'Warning': 3, 'Info': 4,
                          'Verbose': 5, 'Debug': 6}
         
@@ -33,7 +36,11 @@ class FluentLoggerService:
                 })
                 event.Event('cpu_info', cpu_stat.cpu_info())
                 self.running = True
+                interval = self._get_pref('metrics_interval',
+                                          str(int(30 * 1000 * 1000)))
+                self.metricsInterval = int(interval)
         self._startWatchingLogs()
+        self._sendLinuxMetrics()
     
     def stop(self):
         self._stopWatchingLogs()
@@ -93,6 +100,26 @@ class FluentLoggerService:
                 self.logListener.onLogMessage.disconnect(self.handlerId)
                 self.logListener = None
                 self.handlerId = None
+                
+    def _sendLinuxMetrics(self):
+        if not self.running:
+            return
+        cpu_percents = {}
+        for k, v in cpu_stat.cpu_percents().items():
+            cpu_percents['cpu_' + k] = v 
+        load_avg = cpu_stat.load_avg()
+        assert(len(load_avg) == 3)
+        file_desc = cpu_stat.file_desc()
+        assert(len(file_desc) == 3)
+        event.Event('cpu', dict(cpu_percents.items() + zip(['load_1min', 'load_5min', 'load_15min'], load_avg)
+                    + {'procs_running': cpu_stat.procs_running(), 'procs_blocked': cpu_stat.procs_blocked()}.items()
+                    + zip(['filedesc_allocated', 'filedesc_allocated_free', 'filedesc_max'], file_desc)))
+
+        for nic in ['wlan0', 'eth0', 'usb0']:
+            rx, tx = net_stat.rx_tx_bytes(nic)
+            event.Event('net', { 'nic': nic, 'rx_bytes': rx, 'tx_bytes': tx })
+            
+        qi.async(self._sendLinuxMetrics, delay=self.metricsInterval)
             
     def _get_pref(self, name, default_value=None):
         prefManager = self.session.service('ALPreferenceManager')
