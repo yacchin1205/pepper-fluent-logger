@@ -5,6 +5,7 @@ import random
 import threading
 from fluent import sender
 from fluent import event
+from linux_metrics import cpu_stat
 
 PREF_DOMAIN = 'com.github.yacchin1205.fluentlogger'
 
@@ -30,6 +31,7 @@ class FluentLoggerService:
                 event.Event('service', {
                     'status': 'started'
                 })
+                event.Event('cpu_info', cpu_stat.cpu_info())
                 self.running = True
         self._startWatchingLogs()
     
