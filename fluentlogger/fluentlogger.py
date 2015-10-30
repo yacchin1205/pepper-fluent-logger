@@ -21,6 +21,7 @@ class FluentLoggerService:
         self.metricsInterval = int(10 * 1000 * 1000)
         self.logLevel = {'Fatal': 1, 'Error': 2, 'Warning': 3, 'Info': 4,
                          'Verbose': 5, 'Debug': 6}
+        self.robotName = self._getRobotName()
         
     def start(self):
         with self.lock:
@@ -31,10 +32,8 @@ class FluentLoggerService:
                 tag = self._get_pref('tag', 'pepper')
                 sender.setup(tag, host=host,
                              port=int(self._get_pref('port', '24224')))
-                event.Event('service', {
-                    'status': 'started'
-                })
-                event.Event('cpu_info', cpu_stat.cpu_info())
+                self.sendEvent('service', {'status': 'started'})
+                self.sendEvent('cpu_info', cpu_stat.cpu_info())
                 self.running = True
                 interval = self._get_pref('metrics_interval',
                                           str(int(30 * 1000 * 1000)))
@@ -46,9 +45,7 @@ class FluentLoggerService:
         self._stopWatchingLogs()
         with self.lock:
             if self.running:
-                event.Event('service', {
-                    'status': 'stopped'
-                })
+                self.sendEvent('service', {'status': 'stopped'})
             self.running = False
     
     def setForwarder(self, host, port):
@@ -83,7 +80,7 @@ class FluentLoggerService:
         
     def onLogMessage(self, msg):
         try:
-            event.Event('log', msg)
+            self.sendEvent('log', msg)
         except:
             pass
         
@@ -111,13 +108,13 @@ class FluentLoggerService:
         assert(len(load_avg) == 3)
         file_desc = cpu_stat.file_desc()
         assert(len(file_desc) == 3)
-        event.Event('cpu', dict(cpu_percents.items() + zip(['load_1min', 'load_5min', 'load_15min'], load_avg)
+        self.sendEvent('cpu', dict(cpu_percents.items() + zip(['load_1min', 'load_5min', 'load_15min'], load_avg)
                     + {'procs_running': cpu_stat.procs_running(), 'procs_blocked': cpu_stat.procs_blocked()}.items()
                     + zip(['filedesc_allocated', 'filedesc_allocated_free', 'filedesc_max'], file_desc)))
 
         for nic in ['wlan0', 'eth0', 'usb0']:
             rx, tx = net_stat.rx_tx_bytes(nic)
-            event.Event('net', { 'nic': nic, 'rx_bytes': rx, 'tx_bytes': tx })
+            self.sendEvent('net', { 'nic': nic, 'rx_bytes': rx, 'tx_bytes': tx })
             
         qi.async(self._sendLinuxMetrics, delay=self.metricsInterval)
             
@@ -128,6 +125,30 @@ class FluentLoggerService:
             return default_value
         else:
             return value
+            
+    def sendEvent(self, tag, msg):
+        msg['robot'] = self.robotName
+        event.Event(tag, msg)
+            
+    def _getRobotName(self):
+        realNotVirtual = False
+        try:
+            ALMemory = self.session.service('ALMemory')
+            ALMemory.getData( "DCM/Time" )
+            if( ALMemory.getData( "DCM/Simulation" ) != 1 ):
+                realNotVirtual = True
+            else:
+                import os
+                realNotVirtual = os.path.exists("/home/nao")
+        except:
+            pass # already set to False
+
+        if realNotVirtual:
+            import socket
+            return socket.gethostname()
+        else:
+            return "virtual-robot"
+
     
 def main():
     app = qi.Application()
