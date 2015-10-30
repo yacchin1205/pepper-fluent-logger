@@ -1,0 +1,8 @@
+<project version="3">
+    <qipython name="fluentloggerservice">
+        <package name="fluent" src="lib" />
+        <package name="linux_metrics" src="lib" />
+        <package name="msgpack_pure" src="lib" />
+        <script src="fluentlogger.py" />
+    </qipython>
+</project>
