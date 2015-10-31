@@ -1,0 +1,66 @@
+[
+  {
+    "name": "time",
+    "type": "INTEGER"
+  },
+  {
+    "name": "robot",
+    "type": "STRING"
+  },
+  {
+    "name": "cpu_softirq",
+    "type": "FLOAT"
+  },
+  {
+    "name": "cpu_iowait",
+    "type": "FLOAT"
+  },
+  {
+    "name": "cpu_system",
+    "type": "FLOAT"
+  },
+  {
+    "name": "cpu_idle",
+    "type": "FLOAT"
+  },
+  {
+    "name": "cpu_user",
+    "type": "FLOAT"
+  },
+  {
+    "name": "cpu_irq",
+    "type": "FLOAT"
+  },
+  {
+    "name": "load_1min",
+    "type": "FLOAT"
+  },
+  {
+    "name": "load_5min",
+    "type": "FLOAT"
+  },
+  {
+    "name": "load_15min",
+    "type": "FLOAT"
+  },
+  {
+    "name": "procs_running",
+    "type": "INTEGER"
+  },
+  {
+    "name": "procs_blocked",
+    "type": "INTEGER"
+  },
+  {
+    "name": "filedesc_max",
+    "type": "INTEGER"
+  },
+  {
+    "name": "filedesc_allocated",
+    "type": "INTEGER"
+  },
+  {
+    "name": "filedesc_allocated_free",
+    "type": "INTEGER"
+  }
+]
