@@ -3,6 +3,7 @@ import sys
 import qi
 import random
 import threading
+import traceback
 from fluent import sender
 from fluent import event
 from linux_metrics import cpu_stat
@@ -13,6 +14,14 @@ PREF_DOMAIN = 'com.github.yacchin1205.fluentlogger'
 DEFAULT_METRICS_INTERVAL = 30
 MIN_METRICS_INTERVAL = 10
 DURATION_CPUPERC = 1
+
+ACTUATORS = ["HeadPitch", "HeadYaw",
+             "RShoulderRoll", "RShoulderPitch", "RElbowYaw", "RElbowRoll",
+             "RWristYaw", "RHand",
+             "LShoulderRoll", "LShoulderPitch", "LElbowYaw", "LElbowRoll",
+             "LWristYaw", "LHand",
+             "HipPitch", "HipRoll", "KneePitch",
+             "WheelFL", "WheelFR", "WheelB"]
 
 
 class FluentLoggerService:
@@ -26,6 +35,7 @@ class FluentLoggerService:
         self.logLevel = {'Fatal': 1, 'Error': 2, 'Warning': 3, 'Info': 4,
                          'Verbose': 5, 'Debug': 6}
         self.robotName = self._getRobotName()
+        self.memory = None
 
     def start(self):
         with self.lock:
@@ -45,7 +55,7 @@ class FluentLoggerService:
                                            'config': metrics_conf})
                 self.sendEvent('cpu_info', cpu_stat.cpu_info())
         self._startWatchingLogs()
-        self._sendLinuxMetrics()
+        self._sendMetrics()
 
     def stop(self):
         self._stopWatchingLogs()
@@ -108,8 +118,6 @@ class FluentLoggerService:
                 self.handlerId = None
 
     def _sendLinuxMetrics(self):
-        if not self.running:
-            return
         cpu_percents = {}
         for k, v in cpu_stat.cpu_percents().items():
             cpu_percents['cpu_' + k] = v
@@ -129,7 +137,34 @@ class FluentLoggerService:
             rx, tx = net_stat.rx_tx_bytes(nic)
             self.sendEvent('net', {'nic': nic, 'rx_bytes': rx, 'tx_bytes': tx})
 
-        qi.async(self._sendLinuxMetrics,
+    def _sendBodyMetrics(self):
+        if self.memory is None:
+            self.memory = self.session.service('ALMemory')
+        values = {}
+        for actuator in ACTUATORS:
+            key = 'Device/SubDeviceList/%s/Temperature/Sensor/Value' % actuator
+            try:
+                values[actuator.lower()] = int(self.memory.getData(key))
+            except:
+                print('Failed to get %s: %s' % (key, sys.exc_info()[0]))
+                traceback.print_exc()
+        self.sendEvent('temperature', values)
+
+    def _sendMetrics(self):
+        if not self.running:
+            return
+        try:
+            self._sendLinuxMetrics()
+        except:
+            print('Failed to send linux metrics: %s' % sys.exc_info()[0])
+            traceback.print_exc()
+        try:
+            self._sendBodyMetrics()
+        except:
+            print('Failed to send body metrics: %s' % sys.exc_info()[0])
+            traceback.print_exc()
+
+        qi.async(self._sendMetrics,
                  delay=(self.metricsInterval - DURATION_CPUPERC) * 1000 * 1000)
 
     def _get_pref(self, name, default_value=None):
