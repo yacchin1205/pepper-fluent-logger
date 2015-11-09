@@ -10,6 +10,9 @@ from linux_metrics import cpu_stat
 from linux_metrics import net_stat
 
 PREF_DOMAIN = 'com.github.yacchin1205.fluentlogger'
+DEFAULT_METRICS_INTERVAL = 30
+MIN_METRICS_INTERVAL = 10
+DURATION_CPUPERC = 1
 
 
 class FluentLoggerService:
@@ -19,7 +22,7 @@ class FluentLoggerService:
         self.running = False
         self.logListener = None
         self.handlerId = None
-        self.metricsInterval = int(10 * 1000 * 1000)
+        self.metricsInterval = DEFAULT_METRICS_INTERVAL
         self.logLevel = {'Fatal': 1, 'Error': 2, 'Warning': 3, 'Info': 4,
                          'Verbose': 5, 'Debug': 6}
         self.robotName = self._getRobotName()
@@ -33,12 +36,14 @@ class FluentLoggerService:
                 tag = self._get_pref('tag', 'pepper')
                 sender.setup(tag, host=host,
                              port=int(self._get_pref('port', '24224')))
-                self.sendEvent('service', {'status': 'started'})
-                self.sendEvent('cpu_info', cpu_stat.cpu_info())
                 self.running = True
                 interval = self._get_pref('metrics_interval',
-                                          str(int(30 * 1000 * 1000)))
-                self.metricsInterval = int(interval)
+                                          str(DEFAULT_METRICS_INTERVAL))
+                self.metricsInterval = max(int(interval), MIN_METRICS_INTERVAL)
+                metrics_conf = {'interval_sec': self.metricsInterval}
+                self.sendEvent('service', {'status': 'started',
+                                           'config': metrics_conf})
+                self.sendEvent('cpu_info', cpu_stat.cpu_info())
         self._startWatchingLogs()
         self._sendLinuxMetrics()
 
@@ -124,7 +129,8 @@ class FluentLoggerService:
             rx, tx = net_stat.rx_tx_bytes(nic)
             self.sendEvent('net', {'nic': nic, 'rx_bytes': rx, 'tx_bytes': tx})
 
-        qi.async(self._sendLinuxMetrics, delay=self.metricsInterval)
+        qi.async(self._sendLinuxMetrics,
+                 delay=(self.metricsInterval - DURATION_CPUPERC) * 1000 * 1000)
 
     def _get_pref(self, name, default_value=None):
         prefManager = self.session.service('ALPreferenceManager')
