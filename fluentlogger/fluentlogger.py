@@ -11,6 +11,7 @@ from linux_metrics import net_stat
 
 PREF_DOMAIN = 'com.github.yacchin1205.fluentlogger'
 
+
 class FluentLoggerService:
     def __init__(self, session):
         self.session = session
@@ -22,7 +23,7 @@ class FluentLoggerService:
         self.logLevel = {'Fatal': 1, 'Error': 2, 'Warning': 3, 'Info': 4,
                          'Verbose': 5, 'Debug': 6}
         self.robotName = self._getRobotName()
-        
+
     def start(self):
         with self.lock:
             if self.running:
@@ -40,20 +41,20 @@ class FluentLoggerService:
                 self.metricsInterval = int(interval)
         self._startWatchingLogs()
         self._sendLinuxMetrics()
-    
+
     def stop(self):
         self._stopWatchingLogs()
         with self.lock:
             if self.running:
                 self.sendEvent('service', {'status': 'stopped'})
             self.running = False
-    
+
     def setForwarder(self, host, port):
         prefManager = self.session.service('ALPreferenceManager')
         prefManager.setValue(PREF_DOMAIN, 'host', host)
         prefManager.setValue(PREF_DOMAIN, 'port', str(port))
         self.start()
-        
+
     def setWatchingLogs(self, enabled):
         value = 0
         if enabled:
@@ -65,7 +66,7 @@ class FluentLoggerService:
         else:
             self._stopWatchingLogs()
         return True
-            
+
     def setWatchingLogLevel(self, level):
         validLevels = sorted(self.logLevel.keys())
         if level not in validLevels:
@@ -77,19 +78,22 @@ class FluentLoggerService:
         else:
             self._startWatchingLogs()
         return True
-        
+
     def onLogMessage(self, msg):
         try:
             self.sendEvent('log', msg)
         except:
             pass
-        
+
     def _startWatchingLogs(self):
         with self.lock:
             if int(self._get_pref('qi_log', '0')) != 0 and not self.handlerId:
-                self.logListener = self.session.service('LogManager').createListener()
-                self.logListener.setLevel(self.logLevel[self._get_pref('qi_log_level', 'Info')])
-                self.handlerId = self.logListener.onLogMessage.connect(self.onLogMessage)
+                self.logListener = self.session.service('LogManager') \
+                                       .createListener()
+                logLevelStr = self._get_pref('qi_log_level', 'Info')
+                self.logListener.setLevel(self.logLevel[logLevelStr])
+                self.handlerId = self.logListener \
+                                     .onLogMessage.connect(self.onLogMessage)
 
     def _stopWatchingLogs(self):
         with self.lock:
@@ -97,27 +101,31 @@ class FluentLoggerService:
                 self.logListener.onLogMessage.disconnect(self.handlerId)
                 self.logListener = None
                 self.handlerId = None
-                
+
     def _sendLinuxMetrics(self):
         if not self.running:
             return
         cpu_percents = {}
         for k, v in cpu_stat.cpu_percents().items():
-            cpu_percents['cpu_' + k] = v 
+            cpu_percents['cpu_' + k] = v
         load_avg = cpu_stat.load_avg()
         assert(len(load_avg) == 3)
         file_desc = cpu_stat.file_desc()
         assert(len(file_desc) == 3)
-        self.sendEvent('cpu', dict(cpu_percents.items() + zip(['load_1min', 'load_5min', 'load_15min'], load_avg)
-                    + {'procs_running': cpu_stat.procs_running(), 'procs_blocked': cpu_stat.procs_blocked()}.items()
-                    + zip(['filedesc_allocated', 'filedesc_allocated_free', 'filedesc_max'], file_desc)))
+        stats = cpu_percents.items()
+        stats += zip(['load_1min', 'load_5min', 'load_15min'], load_avg)
+        stats += {'procs_running': cpu_stat.procs_running(),
+                  'procs_blocked': cpu_stat.procs_blocked()}.items()
+        stats += zip(['filedesc_allocated', 'filedesc_allocated_free',
+                      'filedesc_max'], file_desc)
+        self.sendEvent('cpu', dict(stats))
 
         for nic in ['wlan0', 'eth0', 'usb0']:
             rx, tx = net_stat.rx_tx_bytes(nic)
-            self.sendEvent('net', { 'nic': nic, 'rx_bytes': rx, 'tx_bytes': tx })
-            
+            self.sendEvent('net', {'nic': nic, 'rx_bytes': rx, 'tx_bytes': tx})
+
         qi.async(self._sendLinuxMetrics, delay=self.metricsInterval)
-            
+
     def _get_pref(self, name, default_value=None):
         prefManager = self.session.service('ALPreferenceManager')
         value = prefManager.getValue(PREF_DOMAIN, name)
@@ -125,23 +133,23 @@ class FluentLoggerService:
             return default_value
         else:
             return value
-            
+
     def sendEvent(self, tag, msg):
         msg['robot'] = self.robotName
         event.Event(tag, msg)
-            
+
     def _getRobotName(self):
         realNotVirtual = False
         try:
             ALMemory = self.session.service('ALMemory')
-            ALMemory.getData( "DCM/Time" )
-            if( ALMemory.getData( "DCM/Simulation" ) != 1 ):
+            ALMemory.getData("DCM/Time")
+            if ALMemory.getData("DCM/Simulation") != 1:
                 realNotVirtual = True
             else:
                 import os
                 realNotVirtual = os.path.exists("/home/nao")
         except:
-            pass # already set to False
+            pass
 
         if realNotVirtual:
             import socket
@@ -149,7 +157,7 @@ class FluentLoggerService:
         else:
             return "virtual-robot"
 
-    
+
 def main():
     app = qi.Application()
     app.start()
