@@ -4,6 +4,7 @@ import qi
 import random
 import threading
 import traceback
+import socket
 from fluent import sender
 from fluent import event
 from linux_metrics import cpu_stat
@@ -34,30 +35,15 @@ class FluentLoggerService:
         self.metricsInterval = DEFAULT_METRICS_INTERVAL
         self.logLevel = {'Fatal': 1, 'Error': 2, 'Warning': 3, 'Info': 4,
                          'Verbose': 5, 'Debug': 6}
-        self.robotName = self._getRobotName()
+        self.robotName = None
         self.memory = None
+        self.retryCount = 0
 
     def start(self):
-        with self.lock:
-            if self.running:
-                self.stop()
-            host = self._get_pref('host')
-            if host is not None:
-                tag = self._get_pref('tag', 'pepper')
-                sender.setup(tag, host=host,
-                             port=int(self._get_pref('port', '24224')))
-                self.running = True
-                interval = self._get_pref('metrics_interval',
-                                          str(DEFAULT_METRICS_INTERVAL))
-                self.metricsInterval = max(int(interval), MIN_METRICS_INTERVAL)
-                metrics_conf = {'interval_sec': self.metricsInterval}
-                self.sendEvent('service', {'status': 'started',
-                                           'config': metrics_conf})
-                self.sendEvent('cpu_info', cpu_stat.cpu_info())
-        self._startWatchingLogs()
-        self._sendMetrics()
+        self._tryToStart()
 
     def stop(self):
+        self.retryCount = 0
         self._stopWatchingLogs()
         with self.lock:
             if self.running:
@@ -99,6 +85,31 @@ class FluentLoggerService:
             self.sendEvent('log', msg)
         except:
             pass
+
+    def _tryToStart(self):
+        self.robotName = self._getRobotName()
+        if self.robotName is None:
+            self.retryCount += 1
+            qi.async(self._tryToStart, delay=5 * 1000 * 1000 * self.retryCount)
+            return
+        with self.lock:
+            if self.running:
+                self.stop()
+            host = self._get_pref('host')
+            if host is not None:
+                tag = self._get_pref('tag', 'pepper')
+                sender.setup(tag, host=host,
+                             port=int(self._get_pref('port', '24224')))
+                self.running = True
+                interval = self._get_pref('metrics_interval',
+                                          str(DEFAULT_METRICS_INTERVAL))
+                self.metricsInterval = max(int(interval), MIN_METRICS_INTERVAL)
+                metrics_conf = {'interval_sec': self.metricsInterval}
+                self.sendEvent('service', {'status': 'started',
+                                           'config': metrics_conf})
+                self.sendEvent('cpu_info', cpu_stat.cpu_info())
+        self._startWatchingLogs()
+        self._sendMetrics()
 
     def _startWatchingLogs(self):
         with self.lock:
@@ -179,8 +190,9 @@ class FluentLoggerService:
             return value
 
     def sendEvent(self, tag, msg):
-        msg['robot'] = self.robotName
-        event.Event(tag, msg)
+        if self.robotName is not None:
+            msg['robot'] = self.robotName
+            event.Event(tag, msg)
 
     def _getRobotName(self):
         realNotVirtual = False
@@ -196,10 +208,9 @@ class FluentLoggerService:
             pass
 
         if realNotVirtual:
-            import socket
             return socket.gethostname()
         else:
-            return "virtual-robot"
+            return None
 
 
 def main():
