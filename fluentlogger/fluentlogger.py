@@ -106,7 +106,8 @@ class FluentLoggerService:
                 self.metricsInterval = max(int(interval), MIN_METRICS_INTERVAL)
                 metrics_conf = {'interval_sec': self.metricsInterval}
                 self.sendEvent('service', {'status': 'started',
-                                           'config': metrics_conf})
+                                           'config': metrics_conf,
+                                           'retried': self.retryCount})
                 self.sendEvent('cpu_info', cpu_stat.cpu_info())
         self._startWatchingLogs()
         self._sendMetrics()
