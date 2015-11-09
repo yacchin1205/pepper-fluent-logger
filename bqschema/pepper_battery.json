@@ -1,0 +1,14 @@
+[
+  {
+    "name": "time",
+    "type": "INTEGER"
+  },
+  {
+    "name": "robot",
+    "type": "STRING"
+  },
+  {
+    "name": "charge",
+    "type": "INTEGER"
+  }
+]

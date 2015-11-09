@@ -1,0 +1,90 @@
+[
+  {
+    "name": "time",
+    "type": "INTEGER"
+  },
+  {
+    "name": "robot",
+    "type": "STRING"
+  },
+  {
+    "name": "headpitch",
+    "type": "INTEGER"
+  },
+  {
+    "name": "headyaw",
+    "type": "INTEGER"
+  },
+  {
+    "name": "rshoulderroll",
+    "type": "INTEGER"
+  },
+  {
+    "name": "rshoulderpitch",
+    "type": "INTEGER"
+  },
+  {
+    "name": "relbowyaw",
+    "type": "INTEGER"
+  },
+  {
+    "name": "relbowroll",
+    "type": "INTEGER"
+  },
+  {
+    "name": "rwristyaw",
+    "type": "INTEGER"
+  },
+  {
+    "name": "rhand",
+    "type": "INTEGER"
+  },
+  {
+    "name": "lshoulderroll",
+    "type": "INTEGER"
+  },
+  {
+    "name": "lshoulderpitch",
+    "type": "INTEGER"
+  },
+  {
+    "name": "lelbowyaw",
+    "type": "INTEGER"
+  },
+  {
+    "name": "lelbowroll",
+    "type": "INTEGER"
+  },
+  {
+    "name": "lwristyaw",
+    "type": "INTEGER"
+  },
+  {
+    "name": "lhand",
+    "type": "INTEGER"
+  },
+  {
+    "name": "hippitch",
+    "type": "INTEGER"
+  },
+  {
+    "name": "hiproll",
+    "type": "INTEGER"
+  },
+  {
+    "name": "kneepitch",
+    "type": "INTEGER"
+  },
+  {
+    "name": "wheelfl",
+    "type": "INTEGER"
+  },
+  {
+    "name": "wheelfr",
+    "type": "INTEGER"
+  },
+  {
+    "name": "wheelb",
+    "type": "INTEGER"
+  }
+]
