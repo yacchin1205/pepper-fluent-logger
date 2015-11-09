@@ -140,6 +140,9 @@ class FluentLoggerService:
     def _sendBodyMetrics(self):
         if self.memory is None:
             self.memory = self.session.service('ALMemory')
+        battery_charge = self.memory.getData('BatteryChargeChanged')
+        self.sendEvent('battery', {'charge': battery_charge})
+
         values = {}
         for actuator in ACTUATORS:
             key = 'Device/SubDeviceList/%s/Temperature/Sensor/Value' % actuator
