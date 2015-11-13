@@ -7,6 +7,7 @@ import traceback
 import socket
 import time
 import collections
+import resource
 from fluent import sender
 from fluent import event
 import dstat
@@ -110,7 +111,6 @@ class FluentLoggerService:
                                           str(DEFAULT_METRICS_INTERVAL))
                 self.metricsInterval = max(int(interval), MIN_METRICS_INTERVAL)
                 dstat.elapsed = self.metricsInterval
-                self.dstatFirst = True
                 metrics_conf = {'interval_sec': self.metricsInterval}
                 self.sendEvent('service', {'status': 'started',
                                            'config': metrics_conf,
@@ -160,20 +160,23 @@ class FluentLoggerService:
             dstat.op.full = True
             dstat.starttime = time.time()
             dstat.tick = dstat.ticks()
+            dstat.update = 0
+            self.dstatFirst = True
+            dstat.pagesize = resource.getpagesize()
             self.dstatPlugins = []
-            for stat in [dstat.dstat_cpu_adv(), dstat.dstat_mem(),
-                         dstat.dstat_load(), dstat.dstat_disk(),
-                         dstat.dstat_sys()]:
+            dstatPluginNames = ['cpu_adv', 'mem', 'load', 'disk', 'sys',
+                                'net', 'tcp', 'udp', 'proc', 'page']
+
+            for pname in dstatPluginNames:
                 try:
+                    stat = getattr(dstat, 'dstat_' + pname)()
                     stat.check()
                     stat.prepare()
+                    self.dstatPlugins.append((pname, stat))
                 except:
-                    print('Failed to check %s: %s' % (stat.name,
+                    print('Failed to check %s: %s' % (pname,
                                                       sys.exc_info()[0]))
                     traceback.print_exc()
-                else:
-                    pname = stat.__class__.__name__.replace('_', '.')
-                    self.dstatPlugins.append((pname, stat))
 
         try:
             for name, stat in self.dstatPlugins:
@@ -187,6 +190,7 @@ class FluentLoggerService:
                     self.sendEvent(name, dict(zip(stat.vars, vals)))
         finally:
             self.dstatFirst = False
+            dstat.update += self.metricsInterval
 
     def _sendBodyMetrics(self):
         if self.memory is None:
