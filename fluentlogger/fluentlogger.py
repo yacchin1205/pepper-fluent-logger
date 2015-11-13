@@ -5,8 +5,11 @@ import random
 import threading
 import traceback
 import socket
+import time
+import collections
 from fluent import sender
 from fluent import event
+import dstat
 from linux_metrics import cpu_stat
 from linux_metrics import cpu_stat
 from linux_metrics import net_stat
@@ -38,6 +41,8 @@ class FluentLoggerService:
         self.robotName = None
         self.memory = None
         self.retryCount = 0
+        self.dstatPlugins = None
+        self.dstatFirst = True
 
     def start(self):
         self._tryToStart()
@@ -104,6 +109,8 @@ class FluentLoggerService:
                 interval = self._get_pref('metrics_interval',
                                           str(DEFAULT_METRICS_INTERVAL))
                 self.metricsInterval = max(int(interval), MIN_METRICS_INTERVAL)
+                dstat.elapsed = self.metricsInterval
+                self.dstatFirst = True
                 metrics_conf = {'interval_sec': self.metricsInterval}
                 self.sendEvent('service', {'status': 'started',
                                            'config': metrics_conf,
@@ -148,6 +155,38 @@ class FluentLoggerService:
         for nic in ['wlan0', 'eth0', 'usb0']:
             rx, tx = net_stat.rx_tx_bytes(nic)
             self.sendEvent('net', {'nic': nic, 'rx_bytes': rx, 'tx_bytes': tx})
+
+        if self.dstatPlugins is None:
+            dstat.op.full = True
+            dstat.starttime = time.time()
+            dstat.tick = dstat.ticks()
+            self.dstatPlugins = []
+            for stat in [dstat.dstat_cpu_adv(), dstat.dstat_mem(),
+                         dstat.dstat_load(), dstat.dstat_disk(),
+                         dstat.dstat_sys()]:
+                try:
+                    stat.check()
+                    stat.prepare()
+                except:
+                    print('Failed to check %s: %s' % (stat.name,
+                                                      sys.exc_info()[0]))
+                    traceback.print_exc()
+                else:
+                    pname = stat.__class__.__name__.replace('_', '.')
+                    self.dstatPlugins.append((pname, stat))
+
+        try:
+            for name, stat in self.dstatPlugins:
+                stat.extract()
+                if not self.dstatFirst:
+                    if stat.nick:
+                        vals = map(lambda name: get_dstat_values(stat.nick,
+                                   stat.val[name]), stat.vars)
+                    else:
+                        vals = map(lambda name: stat.val[name], stat.vars)
+                    self.sendEvent(name, dict(zip(stat.vars, vals)))
+        finally:
+            self.dstatFirst = False
 
     def _sendBodyMetrics(self):
         if self.memory is None:
@@ -212,6 +251,13 @@ class FluentLoggerService:
             return socket.gethostname()
         else:
             return None
+
+
+def get_dstat_values(nick, val):
+    if isinstance(val, collections.Iterable):
+        return dict(zip(nick, val))
+    else:
+        return val
 
 
 def main():
