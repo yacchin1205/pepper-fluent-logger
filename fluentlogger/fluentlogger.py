@@ -15,8 +15,7 @@ import dstat
 PREF_DOMAIN = 'com.github.yacchin1205.fluentlogger'
 DEFAULT_METRICS_INTERVAL = 30
 MIN_METRICS_INTERVAL = 10
-DEFAULT_DSTAT_PLUGINS = ['cpu_adv', 'mem', 'load', 'disk', 'sys', 'net',
-                         'tcp', 'udp', 'proc', 'page']
+DEFAULT_DSTAT_PLUGINS = ['cpu', 'mem', 'load', 'disk', 'net', 'proc']
 
 ACTUATORS = ["HeadPitch", "HeadYaw",
              "RShoulderRoll", "RShoulderPitch", "RElbowYaw", "RElbowRoll",

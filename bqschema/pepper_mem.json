@@ -1,0 +1,38 @@
+[
+  {
+    "name": "time",
+    "type": "INTEGER"
+  },
+  {
+    "name": "robot",
+    "type": "STRING"
+  },
+  {
+    "name": "MemTotal",
+    "type": "FLOAT"
+  },
+  {
+    "name": "SReclaimable",
+    "type": "FLOAT"
+  },
+  {
+    "name": "Cached",
+    "type": "FLOAT"
+  },
+  {
+    "name": "MemFree",
+    "type": "FLOAT"
+  },
+  {
+    "name": "Shmem",
+    "type": "FLOAT"
+  },
+  {
+    "name": "MemUsed",
+    "type": "FLOAT"
+  },
+  {
+    "name": "Buffers",
+    "type": "FLOAT"
+  }
+]
