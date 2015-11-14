@@ -207,14 +207,14 @@ class FluentLoggerService:
             except:
                 print('Failed to get %s: %s' % (key, sys.exc_info()[0]))
                 traceback.print_exc()
-        if len(distances) > 0:
-            distanceSummary = {'min': min(distances), 'max': max(distances)}
-        else:
-            distanceSummary = None
+
+        min_distance = min(distances) if len(distances) > 0 else None
+        max_distance = max(distances) if len(distances) > 0 else None
         self.sendEvent('people', {'all': len(peopleList),
                                   'visible': visible,
                                   'facedetected': facedetected,
-                                  'distance': distanceSummary})
+                                  'min_distance': min_distance,
+                                  'max_distance': max_distance})
 
     def _sendMetrics(self):
         if not self.running:
