@@ -1,0 +1,38 @@
+[
+  {
+    "name": "time",
+    "type": "INTEGER"
+  },
+  {
+    "name": "robot",
+    "type": "STRING"
+  },
+  {
+    "name": "wlan0",
+    "type": "record",
+    "fields": [
+      {
+        "name": "recv",
+        "type": "FLOAT"
+      },
+      {
+        "name": "send",
+        "type": "FLOAT"
+      }
+    ]
+  },
+  {
+    "name": "usb0",
+    "type": "record",
+    "fields": [
+      {
+        "name": "recv",
+        "type": "FLOAT"
+      },
+      {
+        "name": "send",
+        "type": "FLOAT"
+      }
+    ]
+  }
+]

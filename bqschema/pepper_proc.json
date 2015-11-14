@@ -1,0 +1,22 @@
+[
+  {
+    "name": "time",
+    "type": "INTEGER"
+  },
+  {
+    "name": "robot",
+    "type": "STRING"
+  },
+  {
+    "name": "processes",
+    "type": "FLOAT"
+  },
+  {
+    "name": "procs_running",
+    "type": "FLOAT"
+  },
+  {
+    "name": "procs_blocked",
+    "type": "FLOAT"
+  }
+]

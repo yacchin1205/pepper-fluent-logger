@@ -1,0 +1,38 @@
+[
+  {
+    "name": "time",
+    "type": "INTEGER"
+  },
+  {
+    "name": "robot",
+    "type": "STRING"
+  },
+  {
+    "name": "mmcblk0",
+    "type": "record",
+    "fields": [
+      {
+        "name": "read",
+        "type": "FLOAT"
+      },
+      {
+        "name": "writ",
+        "type": "FLOAT"
+      }
+    ]
+  },
+  {
+    "name": "mmcblk1",
+    "type": "record",
+    "fields": [
+      {
+        "name": "read",
+        "type": "FLOAT"
+      },
+      {
+        "name": "writ",
+        "type": "FLOAT"
+      }
+    ]
+  }
+]

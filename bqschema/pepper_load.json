@@ -1,0 +1,22 @@
+[
+  {
+    "name": "time",
+    "type": "INTEGER"
+  },
+  {
+    "name": "robot",
+    "type": "STRING"
+  },
+  {
+    "name": "load1",
+    "type": "FLOAT"
+  },
+  {
+    "name": "load5",
+    "type": "FLOAT"
+  },
+  {
+    "name": "load15",
+    "type": "FLOAT"
+  }
+]
