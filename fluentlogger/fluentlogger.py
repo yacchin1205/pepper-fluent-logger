@@ -15,6 +15,8 @@ import dstat
 PREF_DOMAIN = 'com.github.yacchin1205.fluentlogger'
 DEFAULT_METRICS_INTERVAL = 30
 MIN_METRICS_INTERVAL = 10
+DEFAULT_DSTAT_PLUGINS = ['cpu_adv', 'mem', 'load', 'disk', 'sys', 'net',
+                         'tcp', 'udp', 'proc', 'page']
 
 ACTUATORS = ["HeadPitch", "HeadYaw",
              "RShoulderRoll", "RShoulderPitch", "RElbowYaw", "RElbowRoll",
@@ -143,10 +145,10 @@ class FluentLoggerService:
                 dstat.update = 0
                 dstat.pagesize = resource.getpagesize()
                 self.dstatPlugins = []
-                dstatPluginNames = ['cpu_adv', 'mem', 'load', 'disk', 'sys',
-                                    'net', 'tcp', 'udp', 'proc', 'page']
+                pluginNames = self._get_pref('dstat_plugins',
+                                             ','.join(DEFAULT_DSTAT_PLUGINS))
 
-                for pname in dstatPluginNames:
+                for pname in pluginNames.split(','):
                     try:
                         stat = getattr(dstat, 'dstat_' + pname)()
                         stat.check()
