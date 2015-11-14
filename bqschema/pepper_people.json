@@ -1,0 +1,30 @@
+[
+  {
+    "name": "time",
+    "type": "INTEGER"
+  },
+  {
+    "name": "robot",
+    "type": "STRING"
+  },
+  {
+    "name": "visible",
+    "type": "FLOAT"
+  },
+  {
+    "name": "all",
+    "type": "FLOAT"
+  },
+  {
+    "name": "facedetected",
+    "type": "FLOAT"
+  },
+  {
+    "name": "min_distance",
+    "type": "FLOAT"
+  },
+  {
+    "name": "max_distance",
+    "type": "FLOAT"
+  }
+]
