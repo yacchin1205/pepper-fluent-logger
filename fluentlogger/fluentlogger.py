@@ -39,7 +39,6 @@ class FluentLoggerService:
         self.memory = None
         self.retryCount = 0
         self.dstatPlugins = None
-        self.dstatFirst = True
 
     def start(self):
         self._tryToStart()
@@ -47,6 +46,7 @@ class FluentLoggerService:
     def stop(self):
         self.retryCount = 0
         self._stopWatchingLogs()
+        self.dstatPlugins = None
         with self.lock:
             if self.running:
                 self.sendEvent('service', {'status': 'stopped'})
@@ -107,6 +107,7 @@ class FluentLoggerService:
                                           str(DEFAULT_METRICS_INTERVAL))
                 self.metricsInterval = max(int(interval), MIN_METRICS_INTERVAL)
                 dstat.elapsed = self.metricsInterval
+                self.dstatPlugins = None
                 metrics_conf = {'interval_sec': self.metricsInterval}
                 self.sendEvent('service', {'status': 'started',
                                            'config': metrics_conf,
@@ -133,40 +134,45 @@ class FluentLoggerService:
 
     def _sendLinuxMetrics(self):
         if self.dstatPlugins is None:
-            dstat.op.full = True
-            dstat.starttime = time.time()
-            dstat.tick = dstat.ticks()
-            dstat.update = 0
-            self.dstatFirst = True
-            dstat.pagesize = resource.getpagesize()
-            self.dstatPlugins = []
-            dstatPluginNames = ['cpu_adv', 'mem', 'load', 'disk', 'sys',
-                                'net', 'tcp', 'udp', 'proc', 'page']
+            try:
+                dstat.op.full = True
+                dstat.op.cpulist = ['all']
+                dstat.cpunr = dstat.getcpunr()
+                dstat.starttime = time.time()
+                dstat.tick = dstat.ticks()
+                dstat.update = 0
+                dstat.pagesize = resource.getpagesize()
+                self.dstatPlugins = []
+                dstatPluginNames = ['cpu_adv', 'mem', 'load', 'disk', 'sys',
+                                    'net', 'tcp', 'udp', 'proc', 'page']
 
-            for pname in dstatPluginNames:
-                try:
-                    stat = getattr(dstat, 'dstat_' + pname)()
-                    stat.check()
-                    stat.prepare()
-                    self.dstatPlugins.append((pname, stat))
-                except:
-                    print('Failed to check %s: %s' % (pname,
-                                                      sys.exc_info()[0]))
-                    traceback.print_exc()
+                for pname in dstatPluginNames:
+                    try:
+                        stat = getattr(dstat, 'dstat_' + pname)()
+                        stat.check()
+                        stat.prepare()
+                        self.dstatPlugins.append((pname, stat))
+                    except:
+                        print('Failed to check %s: %s' % (pname,
+                                                          sys.exc_info()[0]))
+                        traceback.print_exc()
 
-        try:
-            for name, stat in self.dstatPlugins:
-                stat.extract()
-                if not self.dstatFirst:
+                for name, stat in self.dstatPlugins:
+                    stat.extract()
+            finally:
+                dstat.update += self.metricsInterval
+        else:
+            try:
+                for name, stat in self.dstatPlugins:
+                    stat.extract()
                     if stat.nick:
                         vals = map(lambda name: get_dstat_values(stat.nick,
                                    stat.val[name]), stat.vars)
                     else:
                         vals = map(lambda name: stat.val[name], stat.vars)
                     self.sendEvent(name, dict(zip(stat.vars, vals)))
-        finally:
-            self.dstatFirst = False
-            dstat.update += self.metricsInterval
+            finally:
+                dstat.update += self.metricsInterval
 
     def _sendBodyMetrics(self):
         if self.memory is None:
