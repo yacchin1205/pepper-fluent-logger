@@ -191,6 +191,31 @@ class FluentLoggerService:
                 traceback.print_exc()
         self.sendEvent('temperature', values)
 
+    def _sendAmbientMetrics(self):
+        peopleList = self.memory.getData('PeoplePerception/PeopleList')
+        visible = 0
+        facedetected = 0
+        distances = []
+        for p in peopleList:
+            key = 'PeoplePerception/Person/%d/' % p
+            try:
+                if self.memory.getData(key + 'IsVisible'):
+                    visible += 1
+                if self.memory.getData(key + 'IsFaceDetected'):
+                    facedetected += 1
+                distances.append(self.memory.getData(key + 'Distance'))
+            except:
+                print('Failed to get %s: %s' % (key, sys.exc_info()[0]))
+                traceback.print_exc()
+        if len(distances) > 0:
+            distanceSummary = {'min': min(distances), 'max': max(distances)}
+        else:
+            distanceSummary = None
+        self.sendEvent('people', {'all': len(peopleList),
+                                  'visible': visible,
+                                  'facedetected': facedetected,
+                                  'distance': distanceSummary})
+
     def _sendMetrics(self):
         if not self.running:
             return
@@ -203,6 +228,11 @@ class FluentLoggerService:
             self._sendBodyMetrics()
         except:
             print('Failed to send body metrics: %s' % sys.exc_info()[0])
+            traceback.print_exc()
+        try:
+            self._sendAmbientMetrics()
+        except:
+            print('Failed to send ambient metrics: %s' % sys.exc_info()[0])
             traceback.print_exc()
 
         qi.async(self._sendMetrics, delay=self.metricsInterval * 1000 * 1000)
