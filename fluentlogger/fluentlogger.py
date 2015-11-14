@@ -11,14 +11,10 @@ import resource
 from fluent import sender
 from fluent import event
 import dstat
-from linux_metrics import cpu_stat
-from linux_metrics import cpu_stat
-from linux_metrics import net_stat
 
 PREF_DOMAIN = 'com.github.yacchin1205.fluentlogger'
 DEFAULT_METRICS_INTERVAL = 30
 MIN_METRICS_INTERVAL = 10
-DURATION_CPUPERC = 1
 
 ACTUATORS = ["HeadPitch", "HeadYaw",
              "RShoulderRoll", "RShoulderPitch", "RElbowYaw", "RElbowRoll",
@@ -115,7 +111,6 @@ class FluentLoggerService:
                 self.sendEvent('service', {'status': 'started',
                                            'config': metrics_conf,
                                            'retried': self.retryCount})
-                self.sendEvent('cpu_info', cpu_stat.cpu_info())
         self._startWatchingLogs()
         self._sendMetrics()
 
@@ -137,25 +132,6 @@ class FluentLoggerService:
                 self.handlerId = None
 
     def _sendLinuxMetrics(self):
-        cpu_percents = {}
-        for k, v in cpu_stat.cpu_percents().items():
-            cpu_percents['cpu_' + k] = v
-        load_avg = cpu_stat.load_avg()
-        assert(len(load_avg) == 3)
-        file_desc = cpu_stat.file_desc()
-        assert(len(file_desc) == 3)
-        stats = cpu_percents.items()
-        stats += zip(['load_1min', 'load_5min', 'load_15min'], load_avg)
-        stats += {'procs_running': cpu_stat.procs_running(),
-                  'procs_blocked': cpu_stat.procs_blocked()}.items()
-        stats += zip(['filedesc_allocated', 'filedesc_allocated_free',
-                      'filedesc_max'], file_desc)
-        self.sendEvent('cpu', dict(stats))
-
-        for nic in ['wlan0', 'eth0', 'usb0']:
-            rx, tx = net_stat.rx_tx_bytes(nic)
-            self.sendEvent('net', {'nic': nic, 'rx_bytes': rx, 'tx_bytes': tx})
-
         if self.dstatPlugins is None:
             dstat.op.full = True
             dstat.starttime = time.time()
@@ -222,8 +198,7 @@ class FluentLoggerService:
             print('Failed to send body metrics: %s' % sys.exc_info()[0])
             traceback.print_exc()
 
-        qi.async(self._sendMetrics,
-                 delay=(self.metricsInterval - DURATION_CPUPERC) * 1000 * 1000)
+        qi.async(self._sendMetrics, delay=self.metricsInterval * 1000 * 1000)
 
     def _get_pref(self, name, default_value=None):
         prefManager = self.session.service('ALPreferenceManager')
